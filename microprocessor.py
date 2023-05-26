@@ -1,12 +1,21 @@
 class Microprocessor:
     def __init__(self):
         self.registers = {"AX": 0, "BX": 0, "CX": 0, "DX": 0}
-        self.program = []
         self.programCounter = 0
+        self.program = []
+
+    # ---------------------------
+    # Reading and running program
+    # ---------------------------
 
     def readProgram(self, program):
         self.program = [line.split(";")[0].strip() for line in program]  # Ignore comments
         self.programCounter = 0
+
+    def run(self):
+        self.programCounter = 0
+        while self.programCounter < len(self.program):
+            self.step()
 
     def step(self):
         if self.programCounter < len(self.program):
@@ -17,19 +26,18 @@ class Microprocessor:
         else:
             return None
 
-    def run(self):
-        self.programCounter = 0
-        while self.programCounter < len(self.program):
-            self.step()
-
     def reset(self):
         self.programCounter = 0
         for key in self.registers.keys():
             self.registers[key] = 0
 
     def executeCommand(self, command):
-        operation, operands = command.split(None, 1)  # Separate operation from operands
-        operands = [operand.strip().upper() for operand in operands.split(",")]
+        try:
+            operation, operands = command.split(None, 1)  # Separate operation from operands
+        except ValueError:
+            raise Exception(f"Invalid command or line is empty")
+
+        operands = [operand.strip().upper() for operand in operands.split(",")]  # Separate operands
 
         try:
             if operation.upper() == "MOV":
@@ -39,64 +47,103 @@ class Microprocessor:
             elif operation.upper() == "SUB":
                 self.sub(*operands)
             else:
-                print(f"Unknown command: {operation}")
+                raise Exception(f"Unknown command: {operation}")
         except IndexError:
-            print(f"Invalid command: {command}")
-        except ValueError:
-            print(f"Invalid value in command: {command}")
+            raise Exception(f"Invalid command: {command}")
+        except ValueError as e:
+            raise Exception(f"Invalid value in command: {command}. Error: {str(e)}")
+
+    # -----------------
+    # Editing registers
+    # -----------------
 
     @staticmethod
     def parseValue(value):
-        if value.lower().endswith("h"):
-            return int(value[:-1], 16)
-        elif value.lower().endswith("b"):
-            return int(value[:-1], 2)
+        if value.lower().endswith("b"):
+            return int(value[:-1], 2)   # Binary representation
         else:
             return int(value)
 
-    def getRegValue(self, reg):
+    def getValue(self, reg):
         if reg.upper().endswith("H") or reg.upper().endswith("L"):
-            reg, part = reg[:-1], reg[-1]
+            reg, part = reg[0] + 'X', reg[1]
             value = self.registers[reg]
 
             if part == "H":
-                return value >> 8
+                return (value & 0xFF00) >> 8
             else:
                 return value & 0xFF
         else:
             return self.registers[reg]
 
-    def setRegValue(self, reg, value):
+    def setValue(self, reg, value):
         if reg.upper().endswith("H") or reg.upper().endswith("L"):
-            reg, part = reg[:-1], reg[-1]
+            reg, part = reg[0] + 'X', reg[1]
 
             if part == "H":
-                self.registers[reg] = (self.registers[reg] & 0xFF) | (value << 8)
+                self.registers[reg] = (self.registers[reg] & 0x00FF) | (value << 8)
             else:
                 self.registers[reg] = (self.registers[reg] & 0xFF00) | value
         else:
             self.registers[reg] = value
 
+    @staticmethod
+    def getRegSize(reg):
+        if reg.upper().endswith("H") or reg.upper().endswith("L"):
+            return 8
+        else:
+            return 16
+
+    # ------------------------
+    # Microprocessors commands
+    # ------------------------
+
     def mov(self, dest, src):
-        if src in self.registers:
-            value = self.getRegValue(src)
+        if (src[0].upper() + 'X') in self.registers:
+            value = self.getValue(src)
         else:
             value = self.parseValue(src)
 
-        self.setRegValue(dest, value)
+        regSize = self.getRegSize(dest)
+        maxValue = 2 ** regSize - 1
+
+        if not (0 <= value <= maxValue):
+            raise ValueError(f"Value out of range: {value}")
+
+        self.setValue(dest, value)
 
     def add(self, dest, src):
-        if src in self.registers:
-            value = self.getRegValue(src)
+        if (src[0].upper() + 'X') in self.registers:
+            value = self.getValue(src)
         else:
             value = self.parseValue(src)
 
-        self.setRegValue(dest, self.getRegValue(dest) + value)
+        regSize = self.getRegSize(dest)
+        maxValue = 2 ** regSize - 1
+
+        if not (0 <= value <= maxValue):
+            raise ValueError(f"Value out of range: {value}")
+
+        result = self.getValue(dest) + value
+        if result < 0 or result >= 2 ** 16:
+            raise ValueError("Overflow error occurred")
+
+        self.setValue(dest, self.getValue(dest) + value)
 
     def sub(self, dest, src):
-        if src in self.registers:
-            value = self.getRegValue(src)
+        if (src[0].upper() + 'X') in self.registers:
+            value = self.getValue(src)
         else:
             value = self.parseValue(src)
 
-        self.setRegValue(dest, self.getRegValue(dest) - value)
+        regSize = self.getRegSize(dest)
+        maxValue = 2 ** regSize - 1
+
+        if not (0 <= value < maxValue):
+            raise ValueError(f"Value out of range: {value}")
+
+        result = self.getValue(dest) - value
+        if result < 0:
+            raise ValueError("Underflow error occurred")
+
+        self.setValue(dest, self.getValue(dest) - value)

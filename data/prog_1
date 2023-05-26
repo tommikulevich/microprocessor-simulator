@@ -1,2 +1,4 @@
 MOV ax, 2
 ADD BX, 3
+sub bl, 0001b
+mov ch, 22
