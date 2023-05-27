@@ -16,6 +16,7 @@ class Microprocessor:
         self.programCounter = 0
         while self.programCounter < len(self.program):
             self.step()
+        self.programCounter = 0
 
     def step(self):
         if self.programCounter < len(self.program):

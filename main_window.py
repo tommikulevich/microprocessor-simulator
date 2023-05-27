@@ -138,7 +138,6 @@ class MainWindow(QMainWindow):
         self.statusLabel.clear()
         self.processor.reset()
         self.clearHighlight()
-        self.programInput.clear()
         self.updateRegisters()
 
     def clearHighlight(self):
