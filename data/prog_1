@@ -1,4 +1,4 @@
-ov ax, 7   ; 111
+mov ax, 7   ; 111
 mov bh, al
 mov cl, 1001b
 mov dh, cl
