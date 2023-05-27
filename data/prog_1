@@ -1,4 +1,9 @@
-MOV ax, 2
-ADD BX, 3
-sub bl, 0001b
-mov ch, 22
+ov ax, 7   ; 111
+mov bh, al
+mov cl, 1001b
+mov dh, cl
+; empty line
+add ah, 1
+sub bx, 00000001b
+
+add ch, 256	; Error

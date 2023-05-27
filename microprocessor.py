@@ -36,7 +36,7 @@ class Microprocessor:
         try:
             operation, operands = command.split(None, 1)  # Separate operation from operands
         except ValueError:
-            raise Exception(f"Invalid command or line is empty")
+            return
 
         operands = [operand.strip().upper() for operand in operands.split(",")]  # Separate operands
 
